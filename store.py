@@ -123,6 +123,7 @@ class MapStore:
         d = self.dir_for(root)
         info = self._read_info(d) or self._blank_info(root)
         info["status"] = status
+        info["status_at"] = time.time()
         _atomic_write(d / "info.json", json.dumps(info))
         return info
 

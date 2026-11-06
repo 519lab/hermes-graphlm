@@ -72,6 +72,12 @@ class MapBuilder:
             queued = self._enqueue(root, ENRICHED) or queued
         return queued
 
+    def request_enrichment(self, root: Path) -> bool:
+        """Queue only the LLM layer (the structural map already exists)."""
+        if self._settings.enrich == "off":
+            return False
+        return self._enqueue(root, ENRICHED)
+
     def needs_enrichment(self, root: Path) -> bool:
         """Auto mode, no summaries yet, and the last enrichment did not fail.
 

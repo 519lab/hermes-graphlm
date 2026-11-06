@@ -67,6 +67,7 @@ def test_builder_enrich_off_and_manual(mod, repo, tmp_path):
     builder._ensure_worker = lambda: None
     builder.request(repo, enrich=True)
     assert builder._queue.qsize() == 1  # structure only
+    assert builder.request_enrichment(repo) is False
     store2, manual, _ = _builder(mod, tmp_path / "m", enrich="manual")
     assert not manual.needs_enrichment(repo)
 
@@ -109,9 +110,9 @@ def test_wait_idle_times_out(mod, repo, tmp_path):
 
 
 # ---- context ------------------------------------------------------------------
-def _provider(mod, store, missing=None, chars=3000):
-    calls = missing if missing is not None else []
-    return mod("context").ContextProvider(store, max_chars=chars, on_missing=calls.append)
+def _provider(mod, store, ensure=None, chars=3000):
+    return mod("context").ContextProvider(store, max_chars=chars,
+                                          ensure=ensure or (lambda root: False))
 
 
 def test_summary_content_and_bound(mod, repo, tmp_path):
@@ -128,20 +129,39 @@ def test_summary_content_and_bound(mod, repo, tmp_path):
     assert len(short) <= 500 and short.endswith(mod("context").TOOLS_HINT)
 
 
-def test_section_and_turns_deliver_each_version_once(mod, repo, tmp_path):
+def test_first_visit_builds_synchronously_so_the_first_prompt_has_the_map(mod, repo, tmp_path):
     store, builder, _ = _builder(mod, tmp_path)
-    missing: list[Path] = []
-    ctx = _provider(mod, store, missing)
-    # No map yet: section is empty and asks for a build.
+    asked: list[Path] = []
+
+    def ensure(root):
+        asked.append(root)
+        return builder.build_now(root).error is None
+
+    ctx = _provider(mod, store, ensure)
+    text = ctx.section({"cwd": str(repo / "app"), "session_id": "s1"})
+    assert text.startswith("## Codebase map — proj") and asked == [repo]
+    assert ctx.for_turn("s1", str(repo)) is None  # the section already carried it
+    assert asked == [repo]  # no second build once the map exists
+
+
+def test_no_map_and_no_build_means_no_context(mod, repo, tmp_path):
+    store, builder, _ = _builder(mod, tmp_path)
+    ctx = _provider(mod, store)  # ensure refuses (auto_map off)
     assert ctx.section({"cwd": str(repo), "session_id": "s1"}) == ""
-    assert missing == [repo]
     assert ctx.for_turn("s1", str(repo)) is None
+    ctx_lying = _provider(mod, store, ensure=lambda root: True)  # claims success, no map
+    assert ctx_lying.for_turn("s1", str(repo)) is None
+
+
+def test_turns_deliver_each_version_once(mod, repo, tmp_path):
+    store, builder, _ = _builder(mod, tmp_path)
     builder.build_now(repo)
-    # Map became ready mid-session: the next turn carries it once.
+    ctx = _provider(mod, store)
+    # A session whose section lacked the map (moved repos) gets it once.
     first = ctx.for_turn("s1", str(repo))
     assert first and first.startswith("## Codebase map")
     assert ctx.for_turn("s1", str(repo)) is None
-    # A new session that got the map via the section hears nothing extra.
+    # A session that got the map via the section hears nothing extra.
     assert ctx.section({"cwd": str(repo / "app"), "session_id": "s2"})
     assert ctx.for_turn("s2", str(repo)) is None
     # A structural change with a note is delivered once to each session.
@@ -239,6 +259,10 @@ def test_slash_command(mod, repo, tmp_path):
     assert "rebuild failed — boom" in cmd.slash("refresh")
     store.record_error(repo, "enriched", "quota")
     assert "last error (enriched): quota" in mod("commands").describe(store.info(repo))
+    store.set_status(repo, "enriching")
+    assert "status: enriching ·" in mod("commands").describe(store.info(repo))
+    stale = {**store.info(repo), "status_at": 0}
+    assert "enrichment interrupted" in mod("commands").describe(stale)
 
 
 def test_cli(mod, repo, tmp_path, capsys):

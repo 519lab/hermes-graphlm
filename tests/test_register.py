@@ -11,8 +11,8 @@ from conftest import plugin
 from fakes import FakeCtx, FakeLlm
 
 
-def _registered(hermes, cwd, **config):
-    ctx = FakeCtx(cwd=str(cwd), config=config, llm=FakeLlm())
+def _registered(hermes, cwd, surface="cli", **config):
+    ctx = FakeCtx(cwd=str(cwd), surface=surface, config=config, llm=FakeLlm())
     plugin.register(ctx)
     return ctx
 
@@ -31,14 +31,14 @@ def test_register_declares_exactly_the_manifest_surface(hermes, repo):
 def test_session_flow_maps_injects_and_tracks_edits(hermes, repo):
     ctx = _registered(hermes, repo)
     hooks = ctx.hooks
-    hooks["on_session_start"](session_id="s1", model="m", platform="cli")
     builder = ctx.unload[0].__self__
-    assert builder.wait_idle(30)
-
-    # First turn: map is ready (built in the background) → injected once.
-    first = hooks["pre_llm_call"](session_id="s1", user_message="hi", is_first_turn=True)
-    assert first["context"].startswith("## Codebase map — proj")
-    assert hooks["pre_llm_call"](session_id="s1") is None
+    # Session start in the CLI: the frozen prompt section carries the map
+    # (built synchronously on this first visit); no paid enrichment yet.
+    section = ctx.sections["graphlm.map"]["content"]({"cwd": str(repo), "session_id": "s1"})
+    assert section.startswith("## Codebase map — proj")
+    hooks["on_session_start"](session_id="s1", model="m", platform="cli")
+    assert hooks["pre_llm_call"](session_id="s1", user_message="hi", is_first_turn=True) is None
+    assert builder.wait_idle(30) and ctx.llm.calls == []
 
     # Reads are recorded and broadcast, outside paths ignored.
     hooks["post_tool_call"](tool_name="read_file", args={"path": "app/a.py"}, status="ok",
@@ -68,10 +68,28 @@ def test_session_flow_maps_injects_and_tracks_edits(hermes, repo):
     assert builder.wait_idle(30)
     assert "New import cycle introduced" in hooks["pre_llm_call"](session_id="s1")["context"]
 
-    # Summaries were generated in the background (enrich=auto) and announced.
+    # A second user turn proves the session is interactive → summaries start.
+    hooks["pre_llm_call"](session_id="s1", is_first_turn=False)
+    assert builder.wait_idle(30) and len(ctx.llm.calls) == 2
     info = json.loads((hermes.data / "maps").joinpath(
         next(p.name for p in (hermes.data / "maps").iterdir()), "info.json").read_text())
     assert info["enriched_at"] and info["modules"] == 1
+    assert "summaries are now available" in hooks["pre_llm_call"](session_id="s1")["context"]
+
+
+def test_one_shot_cli_never_pays_for_enrichment(hermes, repo):
+    ctx = _registered(hermes, repo)
+    ctx.hooks["on_session_start"](session_id="once")
+    assert ctx.hooks["pre_llm_call"](session_id="once", is_first_turn=True)["context"]
+    assert ctx.unload[0].__self__.wait_idle(30)
+    assert ctx.llm.calls == []
+
+
+def test_long_lived_surfaces_enrich_at_session_start(hermes, repo):
+    ctx = _registered(hermes, repo, surface="desktop")
+    ctx.hooks["on_session_start"](session_id="d1")
+    assert ctx.unload[0].__self__.wait_idle(30)
+    assert len(ctx.llm.calls) == 2
 
 
 def test_auto_map_off_builds_nothing_until_asked(hermes, repo):

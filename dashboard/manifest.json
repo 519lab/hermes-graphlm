@@ -1,0 +1,9 @@
+{
+  "name": "graphlm",
+  "label": "Code Map",
+  "description": "Live codebase map for the project the agent is working in.",
+  "icon": "Network",
+  "version": "0.1.0",
+  "api": "plugin_api.py",
+  "tab": { "path": "/graphlm", "hidden": true }
+}

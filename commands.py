@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import time
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 from .builder import MapBuilder
 from .repo import find_project_root
 from .store import STRUCTURE, MapStore
+
+STALE_ENRICH_S = 3_900  # two passes at the max llm_timeout (1800 s), plus margin
 
 USAGE = (
     "/graphlm [status|refresh|enrich|path]\n"
@@ -24,9 +27,12 @@ def describe(info: Optional[dict[str, Any]]) -> str:
     if not info:
         return "No map yet. It is built automatically on the next turn, or run /graphlm refresh."
     commit = (info.get("commit") or "")[:8] or "working tree"
+    status = info.get("status")
+    if status == "enriching" and time.time() - float(info.get("status_at") or 0) > STALE_ENRICH_S:
+        status = "enrichment interrupted (the process exited) — /graphlm enrich to retry"
     lines = [
         f"graphlm map — {info.get('name')} ({info.get('root')})",
-        f"  status: {info.get('status')} · version {info.get('version')} · map of {commit}",
+        f"  status: {status} · version {info.get('version')} · map of {commit}",
         f"  {info.get('files', 0)} files · {info.get('ast_edges', 0)} import edges · "
         f"{info.get('cycles', 0)} cycles",
     ]

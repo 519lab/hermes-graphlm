@@ -32,21 +32,40 @@ class HookHandlers:
 
     def __init__(self, *, settings: Settings, store: MapStore, builder_factory: Callable[
                  [Callable[[BuildEvent], None]], MapBuilder],
-                 cwd: Callable[[], Optional[str]], broadcast: Broadcast) -> None:
+                 cwd: Callable[[], Optional[str]], surface: Callable[[], str],
+                 broadcast: Broadcast) -> None:
         self._settings = settings
         self._store = store
         self._cwd = cwd
+        self._surface = surface
         self._broadcast = broadcast
         self._activity = ActivityLog()
         self.builder = builder_factory(self.on_build)
         self.context = ContextProvider(store, max_chars=settings.context_chars,
-                                       on_missing=self.ensure_map)
+                                       ensure=self.ensure_map)
 
     # ---- map lifecycle -------------------------------------------------------
-    def ensure_map(self, root: Path) -> None:
-        """Queue whatever this project is missing (no-op when auto_map is off)."""
-        if self._settings.auto_map:
-            self.builder.request(root, enrich=self.builder.needs_enrichment(root))
+    def ensure_map(self, root: Path) -> bool:
+        """True once ``root`` has a map, building the structural one now if needed."""
+        if self._store.load(root) is not None:
+            return True
+        if not self._settings.auto_map:
+            return False
+        return self.builder.build_now(root).error is None
+
+    def maybe_enrich(self, root: Path, *, interactive: bool) -> None:
+        """Queue LLM summaries once per project — only for sessions that will last.
+
+        A one-shot ``hermes chat -q`` exits after one turn, killing the worker
+        mid-request: the tokens are spent and the result is lost. So the classic
+        CLI starts enrichment from its second turn; the gateway behind Desktop,
+        the TUI and messaging platforms outlives any turn and starts at once.
+        """
+        if interactive and self.builder.needs_enrichment(root):
+            self.builder.request_enrichment(root)
+
+    def _long_lived(self) -> bool:
+        return self._surface() not in ("", "cli")
 
     def on_build(self, event: BuildEvent) -> None:
         version = int(event.info.get("version", 0))
@@ -62,11 +81,18 @@ class HookHandlers:
     # ---- Hermes hooks (keyword args; tolerate future fields) -------------------
     def on_session_start(self, **_: Any) -> None:
         root = find_project_root(self._cwd())
-        if root is not None:
-            self.ensure_map(root)
+        if root is not None and self.ensure_map(root):
+            self.maybe_enrich(root, interactive=self._long_lived())
 
-    def pre_llm_call(self, session_id: Optional[str] = None, **_: Any) -> Optional[dict[str, str]]:
-        text = self.context.for_turn(session_id, self._cwd())
+    def pre_llm_call(self, session_id: Optional[str] = None,
+                     is_first_turn: Optional[bool] = None,
+                     **_: Any) -> Optional[dict[str, str]]:
+        cwd = self._cwd()
+        text = self.context.for_turn(session_id, cwd)
+        if is_first_turn is False:
+            root = find_project_root(cwd)
+            if root is not None:
+                self.maybe_enrich(root, interactive=True)
         return {"context": text} if text else None
 
     def post_tool_call(self, tool_name: str = "", args: Any = None, status: str = "",

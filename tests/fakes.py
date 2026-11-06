@@ -49,6 +49,7 @@ class FakeCtx:
     """Records everything ``register(ctx)`` does."""
 
     cwd: str = ""
+    surface: str = "cli"
     config: dict[str, Any] = field(default_factory=dict)
     llm: Any = field(default_factory=FakeLlm)
     hooks: dict[str, Any] = field(default_factory=dict)
@@ -64,6 +65,9 @@ class FakeCtx:
 
     def session_cwd(self) -> str:
         return self.cwd
+
+    def session_surface(self) -> str:
+        return self.surface
 
     def register_hook(self, name: str, cb: Any) -> None:
         self.hooks[name] = cb

@@ -33,12 +33,16 @@ def register(ctx: Any) -> None:
     def cwd() -> Optional[str]:
         return ctx.session_cwd() or None
 
+    def surface() -> str:
+        get = getattr(ctx, "session_surface", None)
+        return (get() or "") if get is not None else ""
+
     def backend() -> Optional[HermesBackend]:
         llm = getattr(ctx, "llm", None)
         return HermesBackend(llm, task=task) if llm is not None else None
 
     hooks = HookHandlers(
-        settings=settings, store=store, cwd=cwd, broadcast=_broadcast,
+        settings=settings, store=store, cwd=cwd, surface=surface, broadcast=_broadcast,
         builder_factory=lambda on_event: MapBuilder(store, settings, backend=backend,
                                                     on_event=on_event),
     )

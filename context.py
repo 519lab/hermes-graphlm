@@ -3,13 +3,14 @@
 Two delivery paths, both small:
 
 * **System prompt section** (``register_system_prompt_section``): built once
-  when a session starts and frozen, so it never breaks prompt caching. It can
-  only show a map that already exists at that moment.
-* **pre_llm_call**: catches everything the section could not —
-  the map becoming ready after the session started (first visit to a repo), a
-  later structural change worth knowing ("your edit introduced an import
-  cycle"), or LLM summaries arriving. Each session hears about a given map
-  version at most once.
+  when a session starts and frozen, so it never breaks prompt caching. On the
+  first visit to a project it builds the structural map synchronously (local
+  parsing, typically well under a second) so even the first prompt has it.
+* **pre_llm_call**: what the frozen section cannot carry — a later
+  structural change worth knowing ("your edit introduced an import cycle"),
+  LLM summaries arriving, or the full summary for a session whose section did
+  not include it (e.g. the session moved into another repo). Each session
+  hears about a given map version at most once.
 """
 
 from __future__ import annotations
@@ -74,10 +75,10 @@ class ContextProvider:
     """Decides what map context each session gets, and remembers it."""
 
     def __init__(self, store: MapStore, *, max_chars: int,
-                 on_missing: Callable[[Path], None]) -> None:
+                 ensure: Callable[[Path], bool]) -> None:
         self._store = store
         self._max_chars = max_chars
-        self._on_missing = on_missing
+        self._ensure = ensure
         self._seen: "OrderedDict[str, _Seen]" = OrderedDict()
         self._notes: dict[str, list[tuple[int, str]]] = {}
         self._lock = threading.Lock()
@@ -97,10 +98,10 @@ class ContextProvider:
         root = find_project_root(_get(mapping, "cwd"))
         if root is None:
             return ""
-        graph, info = self._store.load(root), self._store.info(root)
-        if graph is None or not info:
-            self._on_missing(root)
+        loaded = self._load(root)
+        if loaded is None:
             return ""
+        graph, info = loaded
         self._remember(_get(mapping, "session_id"), repo_key(root), int(info["version"]))
         return summarize(graph, info, self._max_chars)
 
@@ -110,11 +111,10 @@ class ContextProvider:
         root = find_project_root(cwd)
         if root is None:
             return None
-        info = self._store.info(root)
-        graph = self._store.load(root) if info else None
-        if graph is None or not info:
-            self._on_missing(root)
+        loaded = self._load(root)
+        if loaded is None:
             return None
+        graph, info = loaded
         key, version = repo_key(root), int(info.get("version", 0))
         with self._lock:
             seen = self._seen.get(session_id or "")
@@ -129,6 +129,24 @@ class ContextProvider:
         if not fresh:
             return None
         return "graphlm map update: " + " ".join(dict.fromkeys(fresh))
+
+    def _load(self, root: Path) -> Optional[tuple[CodebaseGraph, dict[str, Any]]]:
+        """The stored map, building the structural one first if none exists.
+
+        The first visit to a project must not race a background build: the
+        session's first prompt is assembled milliseconds after it starts, and a
+        one-shot run has no second turn. The structural map is local parsing
+        bounded by ``max_files`` (typically well under a second), so ``ensure``
+        builds it synchronously here; later rebuilds stay in the background.
+        """
+        graph, info = self._store.load(root), self._store.info(root)
+        if graph is None or not info:
+            if not self._ensure(root):
+                return None
+            graph, info = self._store.load(root), self._store.info(root)
+            if graph is None or not info:
+                return None
+        return graph, info
 
     def _remember(self, session_id: Optional[str], key: str, version: int) -> None:
         if not session_id:
