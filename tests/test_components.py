@@ -282,3 +282,32 @@ def test_cli(mod, repo, tmp_path, capsys):
     builder.build_now = lambda root, layer="structure": type("E", (), {"error": "boom",
                                                                        "info": {}})()
     assert cmd.run_cli(parser.parse_args(["map", str(repo)])) == 1
+
+
+# ---- symbol-aware impact ------------------------------------------------------
+def test_impact_with_symbol_separates_users_from_mere_importers(mod, repo, tmp_path):
+    (repo / "app" / "main.py").write_text("from app import util\n\nprint('done')\n")
+    tools, store, _ = _tools(mod, tmp_path, str(repo))
+    r = json.loads(tools.impact({"path": "app/util.py", "symbol": "helper"}))["result"]
+    assert r["symbol"] == "helper"
+    assert r["uses_symbol"] == [] and set(r["imports_without_using"]) == {
+        "app/a.py", "app/b.py", "app/main.py"}
+    (repo / "app" / "a.py").write_text("from app import b\nfrom app import util\nutil.helper()\n")
+    r = json.loads(tools.impact({"path": "app/util.py", "symbol": "util.helper"}))["result"]
+    assert r["uses_symbol"] == [{"path": "app/a.py", "lines": [3]}]
+    assert "symbol must be an identifier" in json.loads(
+        tools.impact({"path": "app/util.py", "symbol": "rm -rf"}))["error"]
+    missing = json.loads(tools.impact({"path": "nope.py", "symbol": "x"}))["result"]
+    assert "uses_symbol" not in missing
+
+
+def test_find_references_bounds(mod, repo, tmp_path, monkeypatch):
+    refs = mod("references")
+    (repo / "big.py").write_text("helper\n" * 10)
+    monkeypatch.setattr(refs, "MAX_BYTES", 60)  # a.py (37B) fits, big.py (70B) does not
+    out = refs.find_references(repo, ["big.py", "../outside.py", "missing.py", "app/a.py"],
+                               "helper")
+    assert out == {"app/a.py": []}          # too big, outside root, missing → skipped
+    monkeypatch.setattr(refs, "MAX_BYTES", 10**6)
+    assert refs.find_references(repo, ["big.py"], "helper")["big.py"] == [1, 2, 3, 4, 5]
+    assert refs.valid_symbol("Config.load") and not refs.valid_symbol("a b")

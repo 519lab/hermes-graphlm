@@ -38,11 +38,11 @@ Requires Hermes Agent ≥ 0.23.0.
 | `graphlm_overview` | The 30-second tour: counts, hubs, entry points, architecture notes, map freshness. |
 | `graphlm_lookup(path)` | What a file does (when summaries exist), what it imports, what imports it, whether it is in a cycle. Accepts a full path, a suffix, or a unique name like `config`. |
 | `graphlm_find(query)` | Locate files by keyword across paths, module names, summaries and symbols. |
-| `graphlm_impact(path, transitive?)` | Blast radius: every file that imports this one, directly or through other files, with distance. |
+| `graphlm_impact(path, transitive?, symbol?)` | Blast radius: every file that imports this one, directly or through other files, with distance. With `symbol`, also which of those files actually use it, with line numbers. That's the grep an agent would otherwise run once per importer. |
 | `graphlm_cycles` | Import cycles with members and risk scores. |
 | **Edit warnings** | After the agent writes files, the map is rebuilt in the background. A new or resolved import cycle is reported once, on the next turn. |
 
-The map tools are pure lookups. They make no model calls and read no files, and answer in about 10 ms.
+The map tools make no model calls and answer from the stored map in about 10 ms. Only `graphlm_impact` with `symbol` reads files: the importers the map already named, each up to 512 KB, at most 100.
 
 ## Commands
 
@@ -90,6 +90,7 @@ What graphlm does on your machine, so you can decide before enabling it:
   - **Which repo:** the git repository (or manifest folder) the session is working in, capped at `max_files`.
   - **What's skipped:** dependency and build folders, secrets files and anything in `.graphlmignore`.
   - **Redaction:** file contents are redacted for secret-like patterns before anything is sent to a model.
+  - **Symbol lookups:** `graphlm_impact` with `symbol` also reads the importing files it names, locally, to find the symbol's lines.
 - **Sends project content to your configured model. Opt-out:** `enrich: off` or `manual`.
   - **What is sent:** with `enrich: auto`, once per project: the directory tree, then up to `max_pass2_files` files (skeletonised and redacted) as two requests through Hermes's `ctx.llm`. That is your provider and billing; graphlm holds no credentials and calls no other service.
   - **Measured cost:** about 100k tokens for a 333-file repository on grok-4.7.

@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `graphlm_overview`: hubs, entry points, cycles, freshness;
   - `graphlm_lookup`: what a file does, imports, and is imported by;
   - `graphlm_find`: locate code by keyword;
-  - `graphlm_impact`: blast radius, direct or transitive;
+  - `graphlm_impact`: blast radius, direct or transitive. With `symbol`, it also shows which importers actually use the symbol, with line numbers;
   - `graphlm_cycles`.
 - **Module summaries on your own model.**
   - **Where it runs:** once per project, through Hermes's `ctx.llm`, so there are no extra API keys.

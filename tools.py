@@ -1,4 +1,7 @@
-"""Model-callable map tools — pure lookups, no LLM calls, no file reads.
+"""Model-callable map tools — lookups over the stored map, no LLM calls.
+
+Only ``graphlm_impact`` with ``symbol`` reads files: the importers the map
+named, bounded (see ``references.py``).
 
 Each tool answers from the stored map of the session's project (or an
 explicit ``project`` path). When no map exists yet, the free structural map is
@@ -15,6 +18,7 @@ from typing import Any, Callable, Optional
 from graphlm import query
 
 from .builder import MapBuilder
+from .references import find_references, valid_symbol
 from .repo import find_project_root
 from .store import MapStore
 
@@ -68,14 +72,18 @@ SCHEMAS: dict[str, dict[str, Any]] = {
         "name": "graphlm_impact",
         "description": (
             "Blast radius of changing a file: every file that imports it, directly or "
-            "(transitive=true) through other files, with distance. Call before editing "
-            "shared code or changing a function signature."
+            "(transitive=true) through other files, with distance. Pass symbol (a function, "
+            "class or constant name) to also get which of those files actually use it, with "
+            "line numbers — no separate grep needed. Call before editing shared code or "
+            "changing a signature."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "path": {"type": "string"},
                 "transitive": {"type": "boolean"},
+                "symbol": {"type": "string",
+                           "description": "Identifier to look for in the importing files."},
                 "project": _PROJECT,
             },
             "required": ["path"],
@@ -133,8 +141,22 @@ class MapTools:
         if not path:
             return _err("path is required")
         transitive = bool(args.get("transitive", False))
-        return self._answer(args, lambda idx, root: query.dependents(
-            idx, path, transitive=transitive, limit=100))
+        symbol = str(args.get("symbol") or "").strip()
+        if symbol and not valid_symbol(symbol):
+            return _err("symbol must be an identifier, e.g. ToolAdapter or Config.load")
+
+        def run(idx: query.MapIndex, root: Path) -> Any:
+            result = query.dependents(idx, path, transitive=transitive, limit=100)
+            if symbol and result.get("found"):
+                importers = [d["path"] for d in result["dependents"]]
+                refs = find_references(root, importers, symbol)
+                result["symbol"] = symbol
+                result["uses_symbol"] = [{"path": p, "lines": refs[p]} for p in importers
+                                         if refs.get(p)]
+                result["imports_without_using"] = [p for p in importers if refs.get(p) == []]
+            return result
+
+        return self._answer(args, run)
 
     def cycles(self, args: dict[str, Any], **_: Any) -> str:
         return self._answer(args, lambda idx, root: query.cycles(idx))

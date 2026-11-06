@@ -31,6 +31,7 @@ impact.py          parser-verified structural delta (new/resolved cycles)
 activity.py        post_tool_call → file touches (incl. V4A patch headers)
 hooks.py           Hermes hook callbacks + build-event fan-out, enrichment policy (ADR-003)
 tools.py           graphlm_overview/lookup/find/impact/cycles
+references.py      impact(symbol=): which importers actually use a symbol (bounded reads)
 commands.py        /graphlm slash command + `hermes graphlm` CLI
 dashboard/plugin_api.py   read-only /maps /graph /activity (imported standalone!)
 desktop/plugin.js  Code Map page (single ES module, no build step)           (ADR-004)
