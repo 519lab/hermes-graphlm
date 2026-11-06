@@ -121,3 +121,15 @@ def test_register_without_llm(hermes, repo):
     plugin.register(ctx)
     builder = ctx.unload[0].__self__
     assert "no model access" in builder.build_now(repo, "enriched").error
+
+
+def test_session_start_refreshes_an_existing_map_in_the_background(hermes, repo):
+    ctx = _registered(hermes, repo, enrich="off")
+    builder = ctx.unload[0].__self__
+    ctx.hooks["on_session_start"](session_id="a")      # first visit: sync build
+    v1 = builder._store.info(repo)["version"]
+    (repo / "app" / "b.py").write_text("from app import util\n")  # edited outside Hermes
+    ctx.hooks["on_session_start"](session_id="b")      # existing map: async refresh
+    assert builder.wait_idle(30)
+    assert builder._store.info(repo)["version"] == v1 + 1
+    assert builder._store.info(repo)["cycles"] == 0

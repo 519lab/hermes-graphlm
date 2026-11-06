@@ -54,12 +54,14 @@ class HookHandlers:
         return self.builder.build_now(root).error is None
 
     def maybe_enrich(self, root: Path, *, interactive: bool) -> None:
-        """Queue LLM summaries once per project — only for sessions that will last.
+        """Queue LLM summaries once per project — only for conversational sessions.
 
-        A one-shot ``hermes chat -q`` exits after one turn, killing the worker
-        mid-request: the tokens are spent and the result is lost. So the classic
-        CLI starts enrichment from its second turn; the gateway behind Desktop,
-        the TUI and messaging platforms outlives any turn and starts at once.
+        Enrichment is the one paid step (measured ~100k tokens for a 333-file
+        repo on grok-4.7). A one-shot ``hermes chat -q`` from a script or cron
+        should not start it as a side effect, so the classic CLI starts it from
+        the second user turn; Desktop, the TUI and messaging platforms are
+        conversational by nature and start at once. ``/graphlm enrich`` always
+        works, and ``enrich: off|manual`` turns the automatic run off.
         """
         if interactive and self.builder.needs_enrichment(root):
             self.builder.request_enrichment(root)
@@ -81,8 +83,17 @@ class HookHandlers:
     # ---- Hermes hooks (keyword args; tolerate future fields) -------------------
     def on_session_start(self, **_: Any) -> None:
         root = find_project_root(self._cwd())
-        if root is not None and self.ensure_map(root):
-            self.maybe_enrich(root, interactive=self._long_lived())
+        if root is None:
+            return
+        had_map = self._store.load(root) is not None
+        if not self.ensure_map(root):
+            return
+        if had_map and self._settings.auto_map:
+            # The code may have changed since the map was built (a pull, a branch
+            # switch, edits outside Hermes): refresh the free structural layer in
+            # the background; a notable difference reaches the agent as a note.
+            self.builder.request(root)
+        self.maybe_enrich(root, interactive=self._long_lived())
 
     def pre_llm_call(self, session_id: Optional[str] = None,
                      is_first_turn: Optional[bool] = None,
