@@ -18,8 +18,10 @@ jobs:
         run: |
           uv venv .venv --python 3.12
           # graphlm>=0.7 (embedding API) — switch to the PyPI pin from pyproject.toml once 0.7.0 is released.
+          # Pinned to a commit SHA, not a branch: a merged branch is deleted and the install breaks.
+          # 57b97bb = graphLM develop after the 0.7.0 release-prep merge (#228).
           uv pip install --python .venv/bin/python \
-            "graphlm[all] @ git+https://github.com/519lab/graphLM@fix/python-nested-imports" \
+            "graphlm[all] @ git+https://github.com/519lab/graphLM@57b97bb171fa621e60458f5952decb2c69f74550" \
             "pytest>=8,<10" "pytest-cov>=5,<8" "pyyaml>=6,<7" "fastapi>=0.110,<1" "httpx>=0.27,<1"
       - name: Tests
         run: .venv/bin/python -m pytest tests --cov=. --cov-config=pyproject.toml --cov-report=term-missing --cov-fail-under=90
