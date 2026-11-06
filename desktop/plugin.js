@@ -447,7 +447,9 @@ function makePage(ctx) {
 
 export default {
   id: ID,
-  name: 'Code Map',
+  // The Plugins page titles a unified package by its desktop half's name, so
+  // keep the package name in it — users look for "graphlm" after installing.
+  name: 'graphlm — Code Map',
   description: 'Live codebase map: watch the agent move through your repository.',
   defaultEnabled: true,
   register(ctx) {
