@@ -5,3 +5,5 @@ __pycache__/
 .pytest_cache/
 coverage.xml
 node_modules/
+.claude/handoff.md
+bench/results/
