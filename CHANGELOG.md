@@ -28,5 +28,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Commands:** `/graphlm [status|refresh|enrich|path]`, and `hermes graphlm [map|status|list]`.
 
 ### Infrastructure
+- **Automatic promotion PR:** after CI passes on `develop`, a workflow opens (or refreshes) the single `develop` → `main` pull request summarising what would be released. Merging it stays a manual decision.
 - **Test client on `httpx2`:** the dev/CI test deps swap `httpx` for `httpx2` and require `starlette>=1.2` (the first release whose `TestClient` uses it). Starlette 1.10 deprecates driving `TestClient` with plain `httpx`; tests now run warning-free.
 - **CI actions on current Node 24 releases:** `actions/checkout` v7, `actions/setup-node` v7, and `astral-sh/setup-uv` pinned to the immutable `v10.3.3`. setup-uv publishes no floating `@vN` tags past v7, so an exact pin is the only way onto current releases; the old v4/v6 actions targeted the deprecated Node 20 runtime.
