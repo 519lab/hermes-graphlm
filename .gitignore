@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.coverage
+.pytest_cache/
+coverage.xml
+node_modules/
+.claude/handoff.md
+bench/results/

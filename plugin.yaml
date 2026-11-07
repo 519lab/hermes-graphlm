@@ -1,0 +1,58 @@
+name: graphlm
+version: "0.1.0"
+description: "Live codebase map for Hermes: an instant parser-verified import graph of the repo you're working in, LLM module summaries on your own model, map tools for the agent, cycle warnings after edits, and a Desktop view that lights up the files the agent touches."
+author: "519lab"
+manifest_version: 2
+api_version: 1
+license: GPL-3.0-or-later
+homepage: https://github.com/519lab/hermes-graphlm
+tags: [code, navigation, codebase-map, developer-tools]
+requires_hermes: ">=0.23.0"
+provides_tools:
+  - graphlm_overview
+  - graphlm_lookup
+  - graphlm_find
+  - graphlm_impact
+  - graphlm_cycles
+provides_hooks:
+  - on_session_start
+  - pre_llm_call
+  - post_tool_call
+capabilities: []
+config_schema:
+  auto_map:
+    type: bool
+    default: true
+    label: "Map projects automatically"
+    description: "Build the free structural map (local parsing, no model calls) when a session starts in a project."
+  enrich:
+    type: str
+    default: auto
+    choices: [auto, manual, "off"]
+    label: "Module summaries"
+    description: "auto: generate LLM summaries once per project with your configured model (uses tokens). manual: only on /graphlm enrich. off: never."
+  max_files:
+    type: int
+    default: 400
+    label: "Max files per project"
+    description: "Files scanned per project (20-5000)."
+  max_pass2_files:
+    type: int
+    default: 60
+    label: "Files the model reads during enrichment"
+  max_context:
+    type: int
+    default: 60000
+    label: "Enrichment input budget (tokens)"
+  max_output_tokens:
+    type: int
+    default: 32000
+    label: "Enrichment output budget (tokens)"
+  llm_timeout:
+    type: int
+    default: 300
+    label: "Enrichment timeout per pass (seconds)"
+  context_chars:
+    type: int
+    default: 3000
+    label: "Map summary size in prompts (characters)"
