@@ -42,7 +42,7 @@ bench/ab.py        with/without A/B over real `hermes chat` sessions
 
 ```bash
 uv venv .venv --python 3.12
-uv pip install --python .venv/bin/python -e "../graphLM[all]" pytest pytest-cov pyyaml fastapi httpx   # until graphlm 0.7 is on PyPI
+uv pip install --python .venv/bin/python "graphlm[all]>=0.7,<0.8" pytest pytest-cov pyyaml fastapi httpx   # or -e "../graphLM[all]" to test against a local graphLM checkout
 .venv/bin/python -m pytest tests                      # config in tests/pytest.ini (see below)
 .venv/bin/python -m pytest tests --cov=. --cov-config=pyproject.toml --cov-report=term-missing
 node --check desktop/plugin.js
