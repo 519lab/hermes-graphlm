@@ -1,5 +1,15 @@
 # graphlm — a live codebase map for Hermes
 
+[![CI](https://img.shields.io/github/actions/workflow/status/519lab/hermes-graphlm/ci.yml?branch=develop&label=CI)](https://github.com/519lab/hermes-graphlm/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/519lab/hermes-graphlm)](https://github.com/519lab/hermes-graphlm/blob/develop/LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://github.com/519lab/hermes-graphlm/blob/develop/pyproject.toml)
+[![Top language](https://img.shields.io/github/languages/top/519lab/hermes-graphlm)](https://github.com/519lab/hermes-graphlm)
+[![Last commit](https://img.shields.io/github/last-commit/519lab/hermes-graphlm/develop)](https://github.com/519lab/hermes-graphlm/commits/develop)
+[![Commit activity](https://img.shields.io/github/commit-activity/m/519lab/hermes-graphlm)](https://github.com/519lab/hermes-graphlm/graphs/commit-activity)
+[![Open issues](https://img.shields.io/github/issues/519lab/hermes-graphlm)](https://github.com/519lab/hermes-graphlm/issues)
+[![Open PRs](https://img.shields.io/github/issues-pr/519lab/hermes-graphlm)](https://github.com/519lab/hermes-graphlm/pulls)
+[![Stars](https://img.shields.io/github/stars/519lab/hermes-graphlm?style=flat)](https://github.com/519lab/hermes-graphlm)
+
 **Hermes sees your repository as a map, and you can watch it move through it.**
 
 The first time a session opens in a project, graphlm builds a parser-verified import graph of the repo with no model calls, in well under a second. It hands the agent the shape of the codebase before its first turn:
