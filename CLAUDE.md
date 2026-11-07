@@ -15,7 +15,7 @@ Design decisions: `DECISIONS.md` (ADR-001…004). User docs: `README.md`.
 
 ## Branch model
 
-`develop` (default, integration) and `main` (released). Every PR targets `develop`. Promotion `develop` → `main` is the owner's call, never squashed.
+`develop` (default, integration) and `main` (released). Every PR targets `develop`. Promotion `develop` → `main` is the owner's call, never squashed. `.github/workflows/promote.yml` (the shared `ggrace519/.github` workflow, pinned to v1.0.2's SHA) opens and refreshes that promotion PR after `ci` passes on a develop push; an open promotion PR is not approval. Its `workflows: [ci]` must match `ci.yml`'s `name:` exactly — rename one, rename both.
 
 ## Layout (one job per module, all < 600 lines)
 
