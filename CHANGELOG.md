@@ -26,3 +26,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - cycles ringed;
   - a file panel with importers and imports.
 - **Commands:** `/graphlm [status|refresh|enrich|path]`, and `hermes graphlm [map|status|list]`.
+
+### Infrastructure
+- **CI actions on current Node 24 releases:** `actions/checkout` v7, `actions/setup-node` v7, and `astral-sh/setup-uv` pinned to the immutable `v10.3.3`. setup-uv publishes no floating `@vN` tags past v7, so an exact pin is the only way onto current releases; the old v4/v6 actions targeted the deprecated Node 20 runtime.
