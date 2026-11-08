@@ -15,7 +15,7 @@ Design decisions: `DECISIONS.md` (ADR-001…004). User docs: `README.md`.
 
 ## Branch model
 
-`develop` (default, integration) and `main` (released). Every PR targets `develop`. Promotion `develop` → `main` is the owner's call, never squashed. `.github/workflows/promote.yml` (the shared `ggrace519/.github` workflow, pinned to v1.0.2's SHA) opens and refreshes that promotion PR after `ci` passes on a develop push; an open promotion PR is not approval. Its `workflows: [ci]` must match `ci.yml`'s `name:` exactly — rename one, rename both.
+`develop` (default, integration) and `main` (released). Every PR targets `develop`. Promotion `develop` → `main` is the owner's call, never squashed. `.github/workflows/promote.yml` (the shared `ggrace519/.github` workflow, pinned to v1.1.0's SHA) opens and refreshes that promotion PR after `ci` passes on a develop push; an open promotion PR is not approval. Its `workflows: [ci]` must match `ci.yml`'s `name:` exactly — rename one, rename both. `.github/workflows/release.yml` (same repo, same pin) tags `vX.Y.Z` and publishes the GitHub release from the top dated `CHANGELOG.md` section on every push to `main`, and dry-runs on the promotion PR. So **every promotion is a release**: before promoting, roll `[Unreleased]` into `## [X.Y.Z] - YYYY-MM-DD` and bump the version in `pyproject.toml`, `plugin.yaml` and `dashboard/manifest.json` — a promotion without a new version fails the dry run. Don't tag by hand.
 
 ## Layout (one job per module, all < 600 lines)
 

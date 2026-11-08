@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-07
+
+### Infrastructure
+- **Releases are automated.** Every push to `main` tags `vX.Y.Z` and publishes the GitHub release from the top dated section of this changelog (the shared `ggrace519/.github` release workflow). On the promotion pull request it runs as a dry run, so a promotion whose `[Unreleased]` entries are not rolled into a new version fails before it can merge.
+- The promotion workflow is pinned to `ggrace519/.github` v1.1.0, whose own checkout step runs on Node 24.
+
 ## [0.1.0] - 2026-11-07
 
 ### Added
@@ -34,5 +40,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Test client on `httpx2`:** the dev/CI test deps swap `httpx` for `httpx2` and require `starlette>=1.2` (the first release whose `TestClient` uses it). Starlette 1.10 deprecates driving `TestClient` with plain `httpx`; tests now run warning-free.
 - **CI actions on current Node 24 releases:** `actions/checkout` v7, `actions/setup-node` v7, and `astral-sh/setup-uv` pinned to the immutable `v10.3.3`. setup-uv publishes no floating `@vN` tags past v7, so an exact pin is the only way onto current releases; the old v4/v6 actions targeted the deprecated Node 20 runtime.
 
-[Unreleased]: https://github.com/519lab/hermes-graphlm/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/519lab/hermes-graphlm/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/519lab/hermes-graphlm/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/519lab/hermes-graphlm/releases/tag/v0.1.0

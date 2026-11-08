@@ -1,5 +1,5 @@
 name: graphlm
-version: "0.1.0"
+version: "0.1.1"
 description: "Live codebase map for Hermes: an instant parser-verified import graph of the repo you're working in, LLM module summaries on your own model, map tools for the agent, cycle warnings after edits, and a Desktop view that lights up the files the agent touches."
 author: "519lab"
 manifest_version: 2

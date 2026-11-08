@@ -1,0 +1,25 @@
+name: release
+
+# Tags vX.Y.Z and publishes the GitHub release from the top `## [X.Y.Z] - YYYY-MM-DD`
+# section of CHANGELOG.md on every push to main. On the promotion pull request it runs
+# as a dry run, so a promotion whose changelog is not rolled into a new version fails
+# before the merge. The logic lives in ggrace519/.github; see its README.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: ggrace519/.github/.github/workflows/release.yml@a97e5ec9598944c5238ee490e5eb1fea7a3770bd # v1.1.0
+    with:
+      dry-run: ${{ github.event_name == 'pull_request' }}
