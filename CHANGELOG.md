@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Infrastructure
+- **Releases are automated.** Every push to `main` tags `vX.Y.Z` and publishes the GitHub release from the top dated section of this changelog (the shared `ggrace519/.github` release workflow). On the promotion pull request it runs as a dry run, so a promotion whose `[Unreleased]` entries are not rolled into a new version fails before it can merge.
+- The promotion workflow is pinned to `ggrace519/.github` v1.1.0, whose own checkout step runs on Node 24.
+
 ## [0.1.0] - 2026-11-07
 
 ### Added
