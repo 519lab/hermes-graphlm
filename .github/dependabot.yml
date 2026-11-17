@@ -6,12 +6,19 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
   - package-ecosystem: "github-actions"
     directory: "/"
+    cooldown:
+      # The shared ggrace519/.github workflows are our own releases: take them
+      # as soon as they are out instead of after the default 3-day cooldown.
+      exclude:
+        - ggrace519/.github/.github/workflows/promote.yml
+        - ggrace519/.github/.github/workflows/release.yml
+        - ggrace519/.github/.github/workflows/version.yml
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
