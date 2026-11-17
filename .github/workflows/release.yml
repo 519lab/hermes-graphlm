@@ -20,6 +20,6 @@ concurrency:
 
 jobs:
   release:
-    uses: ggrace519/.github/.github/workflows/release.yml@a97e5ec9598944c5238ee490e5eb1fea7a3770bd # v1.1.0
+    uses: ggrace519/.github/.github/workflows/release.yml@8217a8363cd8f8222471a39df2a0892e0fec2c00 # v2.0.0
     with:
       dry-run: ${{ github.event_name == 'pull_request' }}
